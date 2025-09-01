@@ -3,6 +3,9 @@ package com.funguscow.synthland.synth
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.json.*
 import kotlinx.serialization.json.internal.FormatLanguage
+import java.io.BufferedReader
+import java.io.FileInputStream
+import java.io.InputStreamReader
 import kotlin.math.PI
 
 typealias ComponentBuilder = (JsonObject, MutableMap<String, Component>) -> Component
@@ -36,20 +39,29 @@ object Parser {
 
         Pair("copy_generator", ::buildCopyGen),
         Pair("copy_filter", ::buildCopyFilter),
+
+        Pair("adsr", ::buildAdsr),
+
+        Pair("load", ::buildFromFile),
     )
 
     @OptIn(InternalSerializationApi::class)
-    fun parseInstrument(@FormatLanguage("json", "", "") str: String) : Pair<Component, Map<String, Component>> {
-        val namespace = mutableMapOf<String, Component>()
+    fun parseInstrument(@FormatLanguage("json", "", "") str: String) : Instrument {
         val json = Json.decodeFromString<JsonObject>(str)
-        val root = buildComponent(json, namespace)
+        return parseInstrument(json)
+    }
+
+    fun parseInstrument(json: JsonObject) : Instrument {
+        val namespace = mutableMapOf<String, Component>()
+        val root = buildComponent(json["instrument"]!!.jsonObject, namespace) as Generator
         namespace.values.forEach {
             when (it) {
                 is CopyFilter -> {it.pointer = namespace[it.name]!! as Filter}
                 is CopyGenerator -> {it.pointer = namespace[it.name]!! as Generator}
             }
         }
-        return Pair(root, namespace)
+        val envelope = json["envelope"]?.let{buildComponent(it.jsonObject, namespace)} as Envelope? ?: NoEnvelope()
+        return Instrument(root, namespace, envelope)
     }
 
     fun buildComponent(json: JsonObject, namespace: MutableMap<String, Component>): Component {
@@ -256,6 +268,20 @@ object Parser {
             }
             else -> throw IllegalArgumentException("Invalid frequency $json")
         }
+    }
+
+    fun buildFromFile(json: JsonObject, namespace: MutableMap<String, Component>) : Component {
+        val path = json["path"]!!.jsonPrimitive.content
+        val stream = FileInputStream(path)
+        return stream.use { buildComponent(Json.decodeFromStream(it), namespace) }
+    }
+
+    fun buildAdsr(json: JsonObject, namespace: MutableMap<String, Component>): ADSR {
+        val attack = json["attack"]!!.jsonPrimitive.float.toDouble()
+        val decay = json["decay"]!!.jsonPrimitive.float.toDouble()
+        val sustain = json["sustain"]!!.jsonPrimitive.float.toDouble()
+        val release = json["release"]!!.jsonPrimitive.float.toDouble()
+        return ADSR(attack, decay, sustain, release)
     }
 }
 

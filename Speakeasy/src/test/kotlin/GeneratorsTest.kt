@@ -25,27 +25,44 @@ object GeneratorsTest {
             volume = 0.2,
         )
     )
+
     fun constructPm(): Generator = SineWave(
         modulatedPhase()
     )
-    fun superSaw() : Generator = SuperSaw(doubleArrayOf(1.0, 1.01, 1.005, 0.99, 0.995), modulatedPhase(), doubleArrayOf(1.0, 0.9, 0.9, 0.5, 0.5))
-    fun testBwLp() : Filter {
-        val (poles, zeros, gain) = IirFilter.digitalPZK(Prototypes::butterworthPZK, 3, FilterType.LOWPASS, 4000 * 2 * PI / 44100)
+
+    fun superSaw(): Generator =
+        SuperSaw(doubleArrayOf(1.0, 1.01, 1.005, 0.99, 0.995), modulatedPhase(), doubleArrayOf(1.0, 0.9, 0.9, 0.5, 0.5))
+
+    fun testBwLp(): Filter {
+        val (poles, zeros, gain) = IirFilter.digitalPZK(
+            Prototypes::butterworthPZK,
+            3,
+            FilterType.LOWPASS,
+            4000 * 2 * PI / 44100
+        )
         val filter = IirFilter.fromPZK(poles, zeros, gain)
         return filter
     }
-    fun testBiquads() : Filter {
-        val (poles, zeros, gain) = IirFilter.digitalPZK(Prototypes::butterworthPZK, 3, FilterType.LOWPASS, 4000 * 2 * PI / 44100)
+
+    fun testBiquads(): Filter {
+        val (poles, zeros, gain) = IirFilter.digitalPZK(
+            Prototypes::butterworthPZK,
+            3,
+            FilterType.LOWPASS,
+            4000 * 2 * PI / 44100
+        )
         val filters = BiquadFilter.fromPZKs(poles, zeros, gain)
         return Chain(*filters.toTypedArray())
     }
-    fun testFir() : Filter {
-        val bands = doubleArrayOf(20.0, 1000.0).map {it * 2 / 44100}.toDoubleArray()
-        return FirFilter.windowed(9, bands, WindowFuncs::hammingWindow).also {println(it.coefficients.joinToString())}
+
+    fun testFir(): Filter {
+        val bands = doubleArrayOf(20.0, 1000.0).map { it * 2 / 44100 }.toDoubleArray()
+        return FirFilter.windowed(9, bands, WindowFuncs::hammingWindow).also { println(it.coefficients.joinToString()) }
     }
 
     val jsonStr = """
         {
+            "instrument": {
             "type": "apply",
             "filter": {
               "type": "chain",
@@ -70,8 +87,8 @@ object GeneratorsTest {
             "generator": {
                 "type": "ears",
                 "left": {
-                "type": "sin",
-                "generator": {
+                  "type": "sin",
+                  "generator": {
                     "type": "add",
                     "left": {
                         "type": "linear"
@@ -84,7 +101,7 @@ object GeneratorsTest {
                             "type": "sin"
                         }
                     }
-                }
+                  }
                 },
                 "right": {
                   "type": "modifier",
@@ -108,53 +125,123 @@ object GeneratorsTest {
                   }
                 }
             }
+            } 
         }
     """.trimIndent()
-    fun testParse() : Generator {
-        val gen = Parser.parseInstrument(jsonStr).first as Generator
+
+    val jsonStrWithCopy = """
+        {
+            "instrument": {
+            "type": "apply",
+            "filter": {
+              "type": "chain",
+              "filters": [
+              {
+                "type": "chorus",
+                "frequency": 0.1,
+                "depth": 300,
+                "size": 10
+                },
+                {
+                "type": "design_iir",
+                "prototype": "BUTTERWORTH",
+                "degree": 4,
+                "cutoff": {
+                  "hz": 4000,
+                  "sampling": 44100
+                }
+                }
+              ]
+            },
+            "generator": {
+                "type": "ears",
+                "left": {
+                  "name": "left",
+                  "type": "sin",
+                  "generator": {
+                    "type": "add",
+                    "left": {
+                        "type": "linear"
+                    },
+                    "right": {
+                        "type": "modifier",
+                        "frequency_multiplier": 12.0,
+                        "volume": 1.0,
+                        "generator": {
+                            "type": "sin"
+                        }
+                    }
+                  }
+                },
+                "right": {
+                  "type": "modifier",
+                  "frequency_addition": 3,
+                  "generator": {
+                    "type": "copy_generator",
+                    "copies": "left",
+                    "name": "right"
+                  }
+                }
+            }
+            } 
+        }
+    """.trimIndent()
+
+    fun testParse(): Generator {
+        val gen = Parser.parseInstrument(jsonStrWithCopy).generator
         return gen
     }
 
-    fun testKs() : Generator = Apply(
+    fun testKs(): Generator = Apply(
         Chorus.uniform(0.2, 150.0, 10),
-        KarplusStrongGenerator(WhiteNoise(), stretch = {12.0}, drum = 0.0)
+        KarplusStrongGenerator(WhiteNoise(), stretch = { 24.0 }, drum = 0.0)
     )
 }
 
 fun main() {
     val drone = GeneratorsTest.testParse()
     val tink = GeneratorsTest.testKs()
-    val scale = doubleArrayOf(0.0, 2.0, 5.0, 7.0, 10.0)
-    val duration = 30.0
+    val scale = doubleArrayOf(0.0, 3.0, 5.0, 7.0, 10.0)
+    val duration = 4.0
     val length = (44100.0 * duration).toInt()
-    val shortNotes = 24
+    val shortNotes = 8
     val shortLength = length / shortNotes
     val channels = 2
-    val format = AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 44100F, 16, channels, 2 * channels, 44100F * 2 * channels, false)
-    val buffer = Array(channels) {AudioNormalizedBuffer(length.toInt())}
-    val miniBuffer = Array(channels) {AudioNormalizedBuffer(shortLength.toInt())}
+    val format =
+        AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 44100F, 16, channels, 2 * channels, 44100F * 2 * channels, false)
+    val buffer = Array(channels) { AudioNormalizedBuffer(length.toInt()) }
+    val miniBuffer = Array(channels) { AudioNormalizedBuffer(shortLength.toInt()) }
     val byteArray = ByteArray(length.toInt() * 2 * channels)
     val byteBuffer = ByteBuffer.wrap(byteArray).order(ByteOrder.LITTLE_ENDIAN)
     val intBuffer = byteBuffer.asShortBuffer()
-    val release = 5.0
-    val adsr = ADSR(10.0, 0.0, 1.0, release)
-    println(Json.encodeToJsonElement(adsr))
+    val release = 1.0
+    val adsr = ADSR(1.0, 0.0, 1.0, release)
+    val droneInst = Instrument(drone, mutableMapOf(), adsr)
     val shortAdsr = ADSR(0.0, 0.0, 1.0, 0.5)
+    val tinkInst = Instrument(tink, mutableMapOf(), shortAdsr)
     val info = DataLine.Info(SourceDataLine::class.java, format)
     val line = AudioSystem.getLine(info) as SourceDataLine
     line.open()
     line.start()
     while (true) {
-        buffer.forEach{b -> b.fill(0.0)}
-        val note = Note(40.0 + scale[Random.nextInt(scale.size)], 0.5, 0.0, length.toDouble())
-        adsr.writeNote(format, note.copy(duration = note.duration - format.sampleRate * release), drone, buffer)
+        buffer.forEach { b -> b.fill(0.0) }
+        val note =
+            Note(40.0 + scale[Random.nextInt(scale.size)], 0.5, 0.0, length.toDouble() - format.sampleRate * release)
+        //adsr.writeNote(format, note.copy(duration = note.duration - format.sampleRate * release), drone, buffer)
+        droneInst.writeNote(format, note, buffer)
         for (sit in 0 until shortNotes) {
-            miniBuffer.forEach{b -> b.fill(0.0)}
-            val shortNote = Note(76.0 + scale[Random.nextInt(scale.size)], 1.0 / shortNotes, sit.toDouble() * shortLength, shortLength.toDouble())
+            miniBuffer.forEach { b -> b.fill(0.0) }
+            val shortNote = Note(
+                76.0 + scale[Random.nextInt(scale.size)],
+                1.0 / shortNotes,
+                sit.toDouble() * shortLength,
+                shortLength.toDouble()
+            )
             if (Random.nextInt(3) > 0) {
                 continue
             }
-            shortAdsr.writeNote(format, shortNote, tink, buffer)
+            //shortAdsr.writeNote(format, shortNote, tink, buffer)
+            tinkInst.writeNote(format, shortNote, buffer)
         }
         intBuffer.rewind()
         repeat(length.toInt()) { a ->

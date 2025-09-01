@@ -140,6 +140,9 @@ class WhiteNoise : Generator {
     }
 }
 
+/**
+ * Apply a filter to a child generator
+ */
 class Apply(private val filter: Filter, private val generator: Generator) : Generator {
     override fun generate(
         format: AudioFormat,
@@ -154,6 +157,9 @@ class Apply(private val filter: Filter, private val generator: Generator) : Gene
     }
 }
 
+/**
+ * Composes multiple detuned sawtooth generators
+ */
 class SuperSaw(private val detunes: DoubleArray, private val generator: Generator, scales: DoubleArray = doubleArrayOf()) : Generator {
     private val scales = if (scales.size == detunes.size) scales else DoubleArray(detunes.size) {1.0 / detunes.size}
     override fun generate(
@@ -177,6 +183,9 @@ class SuperSaw(private val detunes: DoubleArray, private val generator: Generato
     }
 }
 
+/**
+ * Sends one generator to each ear
+ */
 class Ears(private val left: Generator?, private val right: Generator?) : Generator {
     override fun generate(
         format: AudioFormat,
@@ -195,6 +204,9 @@ class Ears(private val left: Generator?, private val right: Generator?) : Genera
     }
 }
 
+/**
+ * Multiply each ear by a different factor
+ */
 class Pan(private val generator: Generator, private val left: Double, private val right: Double): Generator {
     override fun generate(
         format: AudioFormat,
@@ -215,6 +227,9 @@ class Pan(private val generator: Generator, private val left: Double, private va
     }
 }
 
+/**
+ * Pluck generator for strings
+ */
 class KarplusStrongGenerator(private val impulse: Generator, private val decay: (Double) -> Double = {1.0}, private val stretch: (Double) -> Double = {1.0}, private val drum: Double = 0.0) : Generator {
     override fun generate(
         format: AudioFormat,

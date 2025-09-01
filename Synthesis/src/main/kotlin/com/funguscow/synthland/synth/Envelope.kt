@@ -6,34 +6,12 @@ import kotlin.math.max
 import kotlin.math.min
 
 @Serializable
-class ADSR(private val attack: Double, private val decay: Double, private val sustain: Double, private val release: Double) {
-    fun writeNote(format: AudioFormat, note: Note, generator: Generator, outputs: AudioBuffers) {
-        if (format.channels != outputs.size) {
-            throw IllegalArgumentException("Number of channels in format (${format.channels}) does not match size of output buffer (${outputs.size})")
-        }
-        if (format.channels <= 0) {
-            return
-        }
-        val startIdx = (note.start).toInt()
-        val numAlive = (note.duration).toInt()
-        val numRelease = ((note.duration + release * format.sampleRate)).toInt() - numAlive
-        val totalSamples = numAlive + numRelease
-        val endIdx = min( startIdx + totalSamples, outputs[0].size) // Exclusive
-        val numSamples = endIdx - startIdx
-        val noteBuffer = Array(format.channels) {AudioNormalizedBuffer(numSamples)}
-        val livingNote = note.copy(start = Double.MIN_VALUE, duration = Double.MAX_VALUE)
-        generator.generate(format, livingNote, numSamples, noteBuffer, 0)
-
-        // Copy with envelope to output buffer
-        repeat (numSamples) {
-            val envelope = calculateEnvelope(it, numAlive, format)
-            (noteBuffer zip outputs).forEach {(buffer, output) ->
-                output[it + startIdx] += envelope * buffer[it]
-            }
-        }
+class ADSR(private val attack: Double, private val decay: Double, private val sustain: Double, private val release: Double) : Envelope{
+    override fun numExtraSamples(note: Note, format: AudioFormat): Int {
+        return (release * format.sampleRate).toInt()
     }
 
-    private fun calculateEnvelope(idx: Int, numAlive: Int, format: AudioFormat): Double {
+    override fun calculateEnvelope(idx: Int, numAlive: Int, format: AudioFormat): Double {
         // Attack
         val time = idx.toDouble() / format.sampleRate
         if (time <= attack && attack > 0) {
@@ -57,4 +35,9 @@ class ADSR(private val attack: Double, private val decay: Double, private val su
         }
         return 0.0
     }
+}
+
+class NoEnvelope : Envelope {
+    override fun numExtraSamples(note: Note, format: AudioFormat): Int = 0
+    override fun calculateEnvelope(idx: Int, numAlive: Int, format: AudioFormat): Double = 1.0
 }

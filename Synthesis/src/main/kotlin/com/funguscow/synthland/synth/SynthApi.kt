@@ -85,6 +85,56 @@ interface Filter : Component {
     )
 }
 
+interface Envelope : Component {
+    fun calculateEnvelope(idx: Int, numAlive: Int, format: AudioFormat) : Double
+
+    fun numExtraSamples(note: Note, format: AudioFormat) : Int
+    fun writeNote(format: AudioFormat, note: Note, generator: Generator, outputs: AudioBuffers) {
+        if (format.channels != outputs.size) {
+            throw IllegalArgumentException("Number of channels in format (${format.channels}) does not match size of output buffer (${outputs.size})")
+        }
+        if (format.channels <= 0) {
+            return
+        }
+        val startIdx = (note.start).toInt()
+        val numAlive = (note.duration).toInt()
+        val numRelease = ((note.duration + numExtraSamples(note, format))).toInt() - numAlive
+        val totalSamples = numAlive + numRelease
+        val endIdx = min( startIdx + totalSamples, outputs[0].size) // Exclusive
+        val numSamples = endIdx - startIdx
+        val noteBuffer = Array(format.channels) {AudioNormalizedBuffer(numSamples)}
+        val livingNote = note.copy(start = Double.MIN_VALUE, duration = Double.MAX_VALUE)
+        generator.generate(format, livingNote, numSamples, noteBuffer, 0)
+
+        // Copy with envelope to output buffer
+        repeat (numSamples) {
+            val envelope = calculateEnvelope(it, numAlive, format)
+            (noteBuffer zip outputs).forEach {(buffer, output) ->
+                output[it + startIdx] += envelope * buffer[it]
+            }
+        }
+    }
+}
+
+data class Instrument(val generator: Generator, val namespace: Map<String, Component>, val envelope: Envelope = NoEnvelope()) {
+    fun writeNote(format: AudioFormat, note: Note, outputs: AudioBuffers) {
+        envelope.writeNote(format, note, generator, outputs)
+    }
+
+    fun renderSequence(format: AudioFormat, notes: Iterable<Note>) : AudioBuffers {
+        val notesInOrder = notes.sortedBy(Note::start)
+        val lastNote = notes.maxBy {it.start + it.duration}
+        val numSamples = (lastNote.start + lastNote.duration).toInt()
+        val extraSamples = envelope.numExtraSamples(lastNote, format)
+        val totalSamples = numSamples + extraSamples
+        val buffers = AudioBuffers(format.channels) {AudioNormalizedBuffer(totalSamples)}
+        notesInOrder.forEach {
+            envelope.writeNote(format, it, generator, buffers)
+        }
+        return buffers
+    }
+}
+
 data class Complex(val real: Double, val imag: Double = 0.0) {
     val mag2 get() = real * real + imag * imag
     val mag get() = sqrt(mag2)
