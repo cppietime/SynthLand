@@ -20,10 +20,13 @@ object Parser {
         Pair("noise", ::buildNoise),
         Pair("supersaw", ::buildSuperSaw),
         Pair("add", ::buildAddition),
+        Pair("multiply", ::buildMultiplication),
         Pair("apply", ::buildApply),
         Pair("ears", ::buildEars),
         Pair("pan", ::buildPan),
         Pair("pluck", ::buildKarplusStrong),
+        Pair("binbeat", ::buildBinBeat),
+        Pair("monobeat", ::buildMonoBeat),
 
         Pair("chain", ::buildChain),
         Pair("iir", ::buildIir),
@@ -111,6 +114,11 @@ object Parser {
         val right = buildComponent(json["right"]!!.jsonObject, namespace) as Generator
         return Addition(left, right)
     }
+    fun buildMultiplication(json: JsonObject, namespace: MutableMap<String, Component>): Multiplication {
+        val left = buildComponent(json["left"]!!.jsonObject, namespace) as Generator
+        val right = buildComponent(json["right"]!!.jsonObject, namespace) as Generator
+        return Multiplication(left, right)
+    }
     fun buildApply(json: JsonObject, namespace: MutableMap<String, Component>): Apply {
         val generator = readGenerator(json, namespace)
         val filter = buildComponent(json["filter"]!!.jsonObject, namespace) as Filter
@@ -133,6 +141,23 @@ object Parser {
         val stretch = rpnToDoubleTransformer(json["stretch"]) ?: {1.0}
         val drum = json["drum"]?.jsonPrimitive?.float?.toDouble() ?: 0.0
         return KarplusStrongGenerator(generator, decay, stretch, drum)
+    }
+
+    fun buildBinBeat(json: JsonObject, namespace: MutableMap<String, Component>): Ears {
+        val left = readGenerator(json, namespace)
+        val right = readGenerator(json, namespace)
+        val frequency = json["frequency"]?.jsonPrimitive?.float?.toDouble() ?: 0.0
+        val filteredRight = NoteModifier(right, frequencyAddition = frequency)
+        return Ears(left, filteredRight)
+    }
+
+    fun buildMonoBeat(json: JsonObject, namespace: MutableMap<String, Component>): Addition {
+        val left = readGenerator(json, namespace)
+        val filteredLeft = NoteModifier(left, volumeMultiplier = 0.5)
+        val right = readGenerator(json, namespace)
+        val frequency = json["frequency"]?.jsonPrimitive?.float?.toDouble() ?: 0.0
+        val filteredRight = NoteModifier(right, frequencyAddition = frequency, volumeMultiplier = 0.5)
+        return Addition(filteredLeft, filteredRight)
     }
 
     fun rpnToDoubleTransformer(json: JsonElement?): ((Double) -> Double)? {

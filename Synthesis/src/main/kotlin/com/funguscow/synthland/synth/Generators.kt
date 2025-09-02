@@ -88,6 +88,25 @@ class Addition(private val left: Generator, private val right: Generator) : Gene
 }
 
 /**
+ * Multiplies two signals.
+ */
+class Multiplication(private val left: Generator, private val right: Generator) : Generator {
+    override fun generate(
+        format: AudioFormat,
+        note: Note,
+        numSamples: Int,
+        outputs: AudioBuffers,
+        offset: Int
+    ): Boolean {
+        val buffers = Array(format.channels) { AudioNormalizedBuffer(numSamples) }
+        var remaining = left.generate(format, note, numSamples, buffers, offset)
+        remaining = right.generate(format, note, numSamples, outputs, offset) || remaining
+        outputs.forEachIndexed { idx, output -> repeat (numSamples) { i -> output[i] *= buffers[idx][i]} }
+        return remaining
+    }
+}
+
+/**
  * Applies a modulus function to the input to produce a saw wave.
  */
 class SawWave(private val generator: Generator) : Generator {
