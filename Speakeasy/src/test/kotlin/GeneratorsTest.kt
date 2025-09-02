@@ -190,6 +190,7 @@ object GeneratorsTest {
         }
     """.trimIndent()
 
+    // TODO: Test Isochronic tone
     val jsonStrBinBeat = """
         {
             "instrument": {

@@ -27,6 +27,7 @@ object Parser {
         Pair("pluck", ::buildKarplusStrong),
         Pair("binbeat", ::buildBinBeat),
         Pair("monobeat", ::buildMonoBeat),
+        Pair("isotone", ::buildIsoTone),
 
         Pair("chain", ::buildChain),
         Pair("iir", ::buildIir),
@@ -158,6 +159,14 @@ object Parser {
         val frequency = json["frequency"]?.jsonPrimitive?.float?.toDouble() ?: 0.0
         val filteredRight = NoteModifier(right, frequencyAddition = frequency, volumeMultiplier = 0.5)
         return Addition(filteredLeft, filteredRight)
+    }
+
+    fun buildIsoTone(json: JsonObject, namespace: MutableMap<String, Component>): Multiplication {
+        val tone = readGenerator(json, namespace)
+        val square = buildSquare(json["square"]!!.jsonObject, namespace)
+        val frequency = json["frequency"]?.jsonPrimitive?.float?.toDouble() ?: 1.0
+        val squareFiltered = NoteModifier(square, frequency = frequency)
+        return Multiplication(tone, squareFiltered)
     }
 
     fun rpnToDoubleTransformer(json: JsonElement?): ((Double) -> Double)? {
