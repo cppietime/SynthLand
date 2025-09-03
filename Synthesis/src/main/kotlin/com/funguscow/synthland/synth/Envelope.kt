@@ -7,7 +7,7 @@ import kotlin.math.min
 
 @Serializable
 class ADSR(private var attack: Double, private var decay: Double, private var sustain: Double, private var release: Double) : Envelope{
-    override fun numExtraSamples(note: Note, format: AudioFormat): Int {
+    override fun numExtraSamples(note: Note?, format: AudioFormat): Int {
         return (release * format.sampleRate).toInt()
     }
 
@@ -48,6 +48,6 @@ class ADSR(private var attack: Double, private var decay: Double, private var su
 }
 
 class NoEnvelope : Envelope {
-    override fun numExtraSamples(note: Note, format: AudioFormat): Int = 0
+    override fun numExtraSamples(note: Note?, format: AudioFormat): Int = 0
     override fun calculateEnvelope(idx: Int, numAlive: Int, format: AudioFormat): Double = 1.0
 }

@@ -49,6 +49,20 @@ object Parser {
         Pair("load", ::buildFromFile),
     )
 
+    fun parseVoice(json: JsonObject) : Voice {
+        val instrument = parseInstrument(json["instrument"]!!.jsonObject)
+        val volume = json["volume"]?.jsonPrimitive?.double ?: 1.0
+        val speed = json["speed"]?.jsonPrimitive?.double ?: 1.0
+        val scale = parseScale(json["scale"]!!.jsonObject)
+        val type = NoteType.valueOf(json["type"]?.jsonPrimitive?.content ?: NoteType.DRONE.name)
+        return Voice(instrument, volume, speed, scale, type)
+    }
+
+    fun parseScale(json: JsonObject) : NoteScale {
+        // TODO: Customize, for now just use major
+        return UniformRandomScale(69.0, listOf(2, 2, 1, 2, 2, 2, 1))
+    }
+
     @OptIn(InternalSerializationApi::class)
     fun parseInstrument(@FormatLanguage("json", "", "") str: String) : Instrument {
         val json = Json.decodeFromString<JsonObject>(str)

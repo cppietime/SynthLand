@@ -90,7 +90,7 @@ interface Filter : Component {
 interface Envelope : Component {
     fun calculateEnvelope(idx: Int, numAlive: Int, format: AudioFormat) : Double
 
-    fun numExtraSamples(note: Note, format: AudioFormat) : Int
+    fun numExtraSamples(note: Note?, format: AudioFormat) : Int
     fun writeNote(format: AudioFormat, note: Note, generator: Generator, outputs: AudioBuffers) {
         if (format.channels != outputs.size) {
             throw IllegalArgumentException("Number of channels in format (${format.channels}) does not match size of output buffer (${outputs.size})")
