@@ -100,7 +100,7 @@ object Parser {
     }
     fun buildSquare(json: JsonObject, namespace: MutableMap<String, Component>): SquareWave {
         val generator = readGenerator(json, namespace)
-        val duty = json["duty"] as Double? ?: 0.5
+        val duty = json["duty"]?.jsonPrimitive?.double ?: 0.5
         return SquareWave(generator, duty)
     }
     fun buildNoise(json: JsonObject, namespace: MutableMap<String, Component>): WhiteNoise = WhiteNoise()
@@ -165,8 +165,10 @@ object Parser {
         val tone = readGenerator(json, namespace)
         val square = buildSquare(json["square"]!!.jsonObject, namespace)
         val frequency = json["frequency"]?.jsonPrimitive?.float?.toDouble() ?: 1.0
-        val squareFiltered = NoteModifier(square, frequency = frequency)
-        return Multiplication(tone, squareFiltered)
+        val squareFiltered = NoteModifier(square, frequency = frequency, volume = 0.5)
+        val offset = DC(0.5)
+        val squareOffset = Addition(squareFiltered, offset)
+        return Multiplication(tone, squareOffset)
     }
 
     fun rpnToDoubleTransformer(json: JsonElement?): ((Double) -> Double)? {

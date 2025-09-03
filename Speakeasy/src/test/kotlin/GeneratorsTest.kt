@@ -190,7 +190,6 @@ object GeneratorsTest {
         }
     """.trimIndent()
 
-    // TODO: Test Isochronic tone
     val jsonStrBinBeat = """
         {
             "instrument": {
@@ -241,8 +240,61 @@ object GeneratorsTest {
         }
     """.trimIndent()
 
+    val jsonStrIsoTone = """
+        {
+            "instrument": {
+            "type": "apply",
+            "filter": {
+              "type": "chain",
+              "filters": [
+              {
+                "type": "chorus",
+                "frequency": 0.1,
+                "depth": 300,
+                "size": 10
+                },
+                {
+                "type": "design_iir",
+                "prototype": "BUTTERWORTH",
+                "degree": 4,
+                "cutoff": {
+                  "hz": 4000,
+                  "sampling": 44100
+                }
+                }
+              ]
+            },
+            "generator": {
+                "type": "isotone",
+                "generator": {
+                  "name": "left",
+                  "type": "sin",
+                  "generator": {
+                    "type": "add",
+                    "left": {
+                        "type": "linear"
+                    },
+                    "right": {
+                        "type": "modifier",
+                        "frequency_multiplier": 12.0,
+                        "volume": 1.0,
+                        "generator": {
+                            "type": "sin"
+                        }
+                    }
+                  }
+                },
+                "frequency": 7.0,
+                "square": {
+                   "duty": 0.2
+                }
+            }
+            } 
+        }
+    """.trimIndent()
+
     fun testParse(): Generator {
-        val gen = Parser.parseInstrument(jsonStrBinBeat).generator
+        val gen = Parser.parseInstrument(jsonStrIsoTone).generator
         return gen
     }
 

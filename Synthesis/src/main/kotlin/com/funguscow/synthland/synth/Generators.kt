@@ -4,7 +4,20 @@ import javax.sound.sampled.AudioFormat
 import kotlin.math.*
 import kotlin.random.Random
 
-
+class DC(private val value: Double = 0.0) : Generator {
+    private var phase: Double = 0.0
+    override fun generate(
+        format: AudioFormat,
+        note: Note,
+        numSamples: Int,
+        outputs: AudioBuffers,
+        offset: Int
+    ): Boolean {
+        repeat (numSamples) {idx -> outputs.forEach {output -> output[idx] = if ((phase + idx) >= note.start && (phase + idx) < note.duration) value else 0.0}}
+        phase += numSamples
+        return phase < note.duration
+    }
+}
 
 /**
  * Generates a linear phase where each sample increment by 2PI x frequency / sample rate.
@@ -45,7 +58,9 @@ class NoteModifier(private val generator: Generator, private val frequency: Doub
         if (frequency == null && frequencyMultiplier == null && frequencyAddition == null && volume == null && volumeMultiplier == null) {
             newNote = note
         } else {
-            var midiNote = frequency ?: (note.midiNote + (frequencyMultiplier ?: 0.0))
+            var midiNote = frequency?.let{
+                69.0 + log(frequency / 440.0, 2.0.pow(1.0 / 12.0))
+            } ?: (note.midiNote + (frequencyMultiplier ?: 0.0))
             if (frequencyAddition != null) {
                 midiNote += log(1.0 + frequencyAddition / note.frequency, 2.0.pow(1.0 / 12))
             }
