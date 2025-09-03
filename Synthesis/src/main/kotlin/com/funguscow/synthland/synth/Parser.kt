@@ -166,6 +166,9 @@ object Parser {
         val square = buildSquare(json["square"]!!.jsonObject, namespace)
         val frequency = json["frequency"]?.jsonPrimitive?.float?.toDouble() ?: 1.0
         val squareFiltered = NoteModifier(square, frequency = frequency, volume = 0.5)
+        json["name"]?.jsonPrimitive?.content?.also {
+            namespace["${it}_square_filtered"] = squareFiltered
+        }
         val offset = DC(0.5)
         val squareOffset = Addition(squareFiltered, offset)
         return Multiplication(tone, squareOffset)

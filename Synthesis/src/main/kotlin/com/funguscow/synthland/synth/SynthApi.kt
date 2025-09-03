@@ -57,7 +57,9 @@ data class Note(
 }
 
 interface Component {
-    fun setParam(key: String, value: Any) {}
+    fun setParam(key: String, value: Double) {
+        println("No parameter found for key \"$key\"...")
+    }
 }
 
 interface Generator : Component {

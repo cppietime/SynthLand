@@ -265,6 +265,7 @@ object GeneratorsTest {
               ]
             },
             "generator": {
+                "name": "isotone",
                 "type": "isotone",
                 "generator": {
                   "name": "left",
@@ -293,8 +294,8 @@ object GeneratorsTest {
         }
     """.trimIndent()
 
-    fun testParse(): Generator {
-        val gen = Parser.parseInstrument(jsonStrIsoTone).generator
+    fun testParse(): Instrument {
+        val gen = Parser.parseInstrument(jsonStrIsoTone)
         return gen
     }
 
@@ -322,18 +323,21 @@ object GeneratorsTest {
         val intBuffer = byteBuffer.asShortBuffer()
         val release = 1.0
         val adsr = ADSR(1.0, 0.0, 1.0, release)
-        val droneInst = Instrument(drone, mutableMapOf(), adsr)
+        val droneInst = Instrument(drone.generator, drone.namespace, adsr)
         val shortAdsr = ADSR(0.0, 0.0, 1.0, 0.5)
         val tinkInst = Instrument(tink, mutableMapOf(), shortAdsr)
         val info = DataLine.Info(SourceDataLine::class.java, format)
         val line = AudioSystem.getLine(info) as SourceDataLine
         line.open()
         line.start()
+        println(droneInst.namespace.keys)
         while (true) {
             buffer.forEach { b -> b.fill(0.0) }
             val note =
                 Note(64.0 + scale[Random.nextInt(scale.size)], 0.5, 0.0, length.toDouble() - format.sampleRate * release)
             //adsr.writeNote(format, note.copy(duration = note.duration - format.sampleRate * release), drone, buffer)
+            val toneFreq = Random.nextDouble(0.5, 6.0)
+            droneInst.namespace["isotone_square_filtered"]?.setParam("frequency", toneFreq) ?: println("Not found!")
             droneInst.writeNote(format, note, buffer)
             for (sit in 0 until shortNotes) {
                 miniBuffer.forEach { b -> b.fill(0.0) }

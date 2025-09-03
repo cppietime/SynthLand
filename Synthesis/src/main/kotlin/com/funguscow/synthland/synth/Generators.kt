@@ -37,7 +37,7 @@ class Linear : Generator {
  * Modifies the frequency or volume of the child generator.
  * Frequency is represented as MIDI note indices, so a value of 12.0 corresponds to raising an octave.
  */
-class NoteModifier(private val generator: Generator, private val frequency: Double? = null, private val frequencyMultiplier: Double? = null, private val frequencyAddition: Double? = null, private val volume: Double? = null, private val volumeMultiplier: Double? = null) : Generator {
+class NoteModifier(private val generator: Generator, private var frequency: Double? = null, private val frequencyMultiplier: Double? = null, private val frequencyAddition: Double? = null, private val volume: Double? = null, private val volumeMultiplier: Double? = null) : Generator {
     init {
         if (frequency != null && (frequencyMultiplier != null || frequencyAddition != null)) {
             throw IllegalArgumentException("NoteModifier may not specify both a frequency and frequency multiplier")
@@ -54,6 +54,8 @@ class NoteModifier(private val generator: Generator, private val frequency: Doub
         outputs: AudioBuffers,
         offset: Int
     ): Boolean {
+        // Thread safety assignments
+        val frequency = this.frequency
         val newNote: Note
         if (frequency == null && frequencyMultiplier == null && frequencyAddition == null && volume == null && volumeMultiplier == null) {
             newNote = note
@@ -68,6 +70,15 @@ class NoteModifier(private val generator: Generator, private val frequency: Doub
             newNote = note.copy(midiNote = midiNote, volume = volume)
         }
         return generator.generate(format, newNote, numSamples, outputs, offset)
+    }
+
+    override fun setParam(key: String, value: Double) {
+        when (key) {
+            "frequency" -> {
+                frequency = value
+            }
+            else -> super.setParam(key, value)
+        }
     }
 }
 
