@@ -57,7 +57,7 @@ data class Note(
 }
 
 interface Component {
-    fun setParam(key: String, value: Double) {
+    fun setParam(key: String, value: Double?) {
         println("No parameter found for key \"$key\"...")
     }
 }

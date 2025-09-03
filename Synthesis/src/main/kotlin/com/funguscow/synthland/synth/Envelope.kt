@@ -6,7 +6,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 @Serializable
-class ADSR(private val attack: Double, private val decay: Double, private val sustain: Double, private val release: Double) : Envelope{
+class ADSR(private var attack: Double, private var decay: Double, private var sustain: Double, private var release: Double) : Envelope{
     override fun numExtraSamples(note: Note, format: AudioFormat): Int {
         return (release * format.sampleRate).toInt()
     }
@@ -34,6 +34,16 @@ class ADSR(private val attack: Double, private val decay: Double, private val su
             return max(0.0, sustain * (1.0 - releaseTime) / release)
         }
         return 0.0
+    }
+
+    override fun setParam(key: String, value: Double?) {
+        when (key) {
+            "attack" -> attack = value ?: attack
+            "decay" -> decay = value ?: decay
+            "sustain" -> sustain = value ?: sustain
+            "release" -> release = value ?: release
+            else -> super.setParam(key, value)
+        }
     }
 }
 

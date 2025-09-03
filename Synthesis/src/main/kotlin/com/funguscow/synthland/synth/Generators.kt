@@ -4,7 +4,7 @@ import javax.sound.sampled.AudioFormat
 import kotlin.math.*
 import kotlin.random.Random
 
-class DC(private val value: Double = 0.0) : Generator {
+class DC(private var value: Double = 0.0) : Generator {
     private var phase: Double = 0.0
     override fun generate(
         format: AudioFormat,
@@ -16,6 +16,13 @@ class DC(private val value: Double = 0.0) : Generator {
         repeat (numSamples) {idx -> outputs.forEach {output -> output[idx] = if ((phase + idx) >= note.start && (phase + idx) < note.duration) value else 0.0}}
         phase += numSamples
         return phase < note.duration
+    }
+
+    override fun setParam(key: String, value: Double?) {
+        when (key) {
+            "value" -> this.value = value ?: this.value
+            else -> super.setParam(key, value)
+        }
     }
 }
 
@@ -37,7 +44,7 @@ class Linear : Generator {
  * Modifies the frequency or volume of the child generator.
  * Frequency is represented as MIDI note indices, so a value of 12.0 corresponds to raising an octave.
  */
-class NoteModifier(private val generator: Generator, private var frequency: Double? = null, private val frequencyMultiplier: Double? = null, private val frequencyAddition: Double? = null, private val volume: Double? = null, private val volumeMultiplier: Double? = null) : Generator {
+class NoteModifier(private val generator: Generator, private var frequency: Double? = null, private var frequencyMultiplier: Double? = null, private var frequencyAddition: Double? = null, private var volume: Double? = null, private var volumeMultiplier: Double? = null) : Generator {
     init {
         if (frequency != null && (frequencyMultiplier != null || frequencyAddition != null)) {
             throw IllegalArgumentException("NoteModifier may not specify both a frequency and frequency multiplier")
@@ -56,6 +63,10 @@ class NoteModifier(private val generator: Generator, private var frequency: Doub
     ): Boolean {
         // Thread safety assignments
         val frequency = this.frequency
+        val frequencyMultiplier = this.frequencyMultiplier
+        val frequencyAddition = this.frequencyAddition
+        val volume = this.volume
+        val volumeMultiplier = this.volumeMultiplier
         val newNote: Note
         if (frequency == null && frequencyMultiplier == null && frequencyAddition == null && volume == null && volumeMultiplier == null) {
             newNote = note
@@ -72,10 +83,22 @@ class NoteModifier(private val generator: Generator, private var frequency: Doub
         return generator.generate(format, newNote, numSamples, outputs, offset)
     }
 
-    override fun setParam(key: String, value: Double) {
+    override fun setParam(key: String, value: Double?) {
         when (key) {
             "frequency" -> {
                 frequency = value
+            }
+            "frequency_addition" -> {
+                frequencyAddition = value
+            }
+            "frequency_multiplicatier" -> {
+                frequencyMultiplier = value
+            }
+            "volume" -> {
+                volume = value
+            }
+            "volume_multiplier" -> {
+                volumeMultiplier = value
             }
             else -> super.setParam(key, value)
         }
@@ -152,7 +175,7 @@ class SawWave(private val generator: Generator) : Generator {
 /**
  *  Converts phase to a square wave with customizable duty cycle.
  */
-class SquareWave(private val generator: Generator, private val duty: Double = 0.5) : Generator {
+class SquareWave(private val generator: Generator, private var duty: Double = 0.5) : Generator {
     override fun generate(
         format: AudioFormat,
         note: Note,
@@ -163,6 +186,13 @@ class SquareWave(private val generator: Generator, private val duty: Double = 0.
         val remaining = generator.generate(format, note, numSamples, outputs, offset)
         repeat (numSamples) {idx -> outputs.forEach {output -> output[idx] = note.volume * duty.sign * (if (output[idx] % (2 * PI) <= 2 * PI * duty.absoluteValue) 1.0 else -1.0)}}
         return remaining
+    }
+
+    override fun setParam(key: String, value: Double?) {
+        when (key) {
+            "duty" -> duty = value ?: duty
+            else -> super.setParam(key, value)
+        }
     }
 }
 
@@ -252,7 +282,7 @@ class Ears(private val left: Generator?, private val right: Generator?) : Genera
 /**
  * Multiply each ear by a different factor
  */
-class Pan(private val generator: Generator, private val left: Double, private val right: Double): Generator {
+class Pan(private val generator: Generator, private var left: Double, private var right: Double): Generator {
     override fun generate(
         format: AudioFormat,
         note: Note,
@@ -268,6 +298,14 @@ class Pan(private val generator: Generator, private val left: Double, private va
                 outputs[0][it] *= left
                 outputs[1][it] *= right
             }
+        }
+    }
+
+    override fun setParam(key: String, value: Double?) {
+        when (key) {
+            "left" -> left = value ?: left
+            "right" -> right = value ?: right
+            else -> super.setParam(key, value)
         }
     }
 }
@@ -309,7 +347,6 @@ class KarplusStrongGenerator(private val impulse: Generator, private val decay: 
                 }
             }
         }
-        // TODO this means nothing
         return true
     }
 }
