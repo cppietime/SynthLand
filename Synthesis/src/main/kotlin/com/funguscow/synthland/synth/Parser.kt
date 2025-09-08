@@ -53,14 +53,79 @@ object Parser {
         val instrument = parseInstrument(json["instrument"]!!.jsonObject)
         val volume = json["volume"]?.jsonPrimitive?.double ?: 1.0
         val speed = json["speed"]?.jsonPrimitive?.double ?: 1.0
-        val scale = parseScale(json["scale"]!!.jsonObject)
+        val scale = parseScale(json["scale"]!!)
         val type = NoteType.valueOf(json["type"]?.jsonPrimitive?.content ?: NoteType.DRONE.name)
-        return Voice(instrument, volume, speed, scale, type)
+        val prob = json["probability"]?.jsonPrimitive?.double ?: 1.0
+        return Voice(instrument, volume, speed, scale, type, prob)
     }
 
-    fun parseScale(json: JsonObject) : NoteScale {
-        // TODO: Customize, for now just use major
-        return UniformRandomScale(69.0, listOf(2, 2, 1, 2, 2, 2, 1))
+    fun parseScale(json: JsonElement) : NoteScale =
+        UniformSampleScale(when (json) {
+            is JsonObject -> {
+                val keys = mapOf(
+                    "I" to 0.0,
+                    "ii" to 1.0,
+                    "II" to 2.0,
+                    "iii" to 3.0,
+                    "III" to 4.0,
+                    "IV" to 5.0,
+                    "v" to 6.0,
+                    "V" to 7.0,
+                    "vi" to 8.0,
+                    "VI" to 9.0,
+                    "vii" to 10.0,
+                    "VII" to 11.0,
+                )
+                val (baseNote, _) = parseNote(json["base"]!!.jsonPrimitive.content)
+                val intervals = json["intervals"]!!.jsonArray.map {
+                    keys[it.jsonPrimitive.content] ?: it.jsonPrimitive.double
+                }
+                intervals.map {it + baseNote}
+            }
+            is JsonPrimitive -> {
+                val str = json.content
+                val (baseNote, idx) = parseNote(str)
+                val interval = when(str[idx]) {
+                    'm' -> listOf(0, 2, 3, 5, 7, 8, 10)
+                    'P' -> listOf(0, 2, 4, 7, 9)
+                    'p' -> listOf(0, 3, 5, 7, 10)
+                    'B' -> listOf(0, 2, 3, 4, 7, 9)
+                    'b' -> listOf(0, 3, 5, 6, 7, 10)
+                    'h' -> listOf(0, 2, 3, 5, 7, 8, 11)
+                    else -> listOf(0, 2, 4, 5, 7, 9, 11)
+                }
+                interval.map{it + baseNote}
+            }
+            is JsonArray -> {json.map {parseNote(it.jsonPrimitive.content).first}}
+        })
+
+    fun parseNote(id: String) : Pair<Double, Int> {
+        if (id.first().isDigit() || id.first() == '-') {
+            // Literal MIDI note
+            return Pair(id.toDouble(), id.length)
+        }
+        val a0 = 69 - 48
+        val notes = mapOf(
+            'A' to 0.0,
+            'B' to 2.0,
+            'C' to 3.0,
+            'D' to 5.0,
+            'E' to 7.0,
+            'F' to 8.0,
+            'G' to 10.0,
+        )
+        var idx = 0
+        var note = a0 + notes[id[idx++]]!!
+        if (id[idx] == '#') {
+            note += 1.0
+            idx++
+        }
+        else if (id[idx] == 'b') {
+            note -= 1.0
+            idx++
+        }
+        note += 12 * id[idx++].digitToInt()
+        return Pair(note, idx)
     }
 
     @OptIn(InternalSerializationApi::class)

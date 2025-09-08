@@ -14,6 +14,7 @@ import kotlin.test.Test
 
 object VoiceTest {
 
+    // language=JSON
     val instrStr = """
         {
             "instrument": {
@@ -63,15 +64,17 @@ object VoiceTest {
         }
     """.trimIndent()
 
+    // language=JSON
     val voiceStr = """
         {
           "instrument": $instrStr,
-          "scale": {},
+          "scale": "C0",
           "type": "DRONE",
           "volume": 0.125
         }
     """.trimIndent()
 
+    // language=JSON
     val ksStr = """
         {
           "instrument": {
@@ -96,7 +99,8 @@ object VoiceTest {
           "volume": 0.5,
           "speed": 8.0,
           "type": "PLUCK",
-          "scale": {}
+          "scale": "C4",
+          "probability": 0.333
         }
     """.trimIndent()
 
@@ -124,19 +128,22 @@ object VoiceTest {
         val line = AudioSystem.getLine(info) as SourceDataLine
         line.open()
         line.start()
-        while (true) {
-            buffer.forEach { b -> b.fill(0.0) }
-            drone.writeMeasure(format, buffer)
-            tink.writeMeasure(format, buffer)
-            intBuffer.rewind()
-            repeat(length.toInt()) { a ->
-                buffer.forEach { b ->
-                    intBuffer.put((b[a] * 32767).toInt().toShort())
+        try {
+            while (true) {
+                buffer.forEach { b -> b.fill(0.0) }
+                drone.writeMeasure(format, buffer)
+                tink.writeMeasure(format, buffer)
+                intBuffer.rewind()
+                repeat(length.toInt()) { a ->
+                    buffer.forEach { b ->
+                        intBuffer.put((b[a] * 32767).toInt().toShort())
+                    }
                 }
+                line.write(byteArray, 0, length.toInt() * 2 * channels)
             }
-            line.write(byteArray, 0, length.toInt() * 2 * channels)
+        } finally {
+            line.drain()
+            line.close()
         }
-        line.drain()
-        line.close()
     }
 }
