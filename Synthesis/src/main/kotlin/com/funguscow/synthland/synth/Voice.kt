@@ -20,6 +20,21 @@ class UniformSampleScale(private val notes: List<Double>) : NoteScale {
         return selection
     }
 
+    override fun equals(other: Any?): Boolean {
+        if (other !is UniformSampleScale) {
+            return false
+        }
+        return notes.toSet() == other.notes.toSet()
+    }
+
+    override fun hashCode(): Int {
+        return notes.toSet().hashCode()
+    }
+
+    override fun toString(): String {
+        return "Scale($notes)"
+    }
+
 }
 
 enum class NoteType {

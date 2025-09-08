@@ -17,6 +17,13 @@ object VoiceTest {
     // language=JSON
     val instrStr = """
         {
+            "envelope": {
+                "type": "adsr",
+                "attack": 1.0,
+                "sustain": 1.0,
+                "decay": 0.0,
+                "release": 1.0
+            },
             "instrument": {
             "type": "apply",
             "filter": {
@@ -68,7 +75,7 @@ object VoiceTest {
     val voiceStr = """
         {
           "instrument": $instrStr,
-          "scale": "C0",
+          "scale": "C2",
           "type": "DRONE",
           "volume": 0.125
         }
@@ -94,6 +101,13 @@ object VoiceTest {
               "stretch": [24.0],
               "drum": 0.0
             }
+          },
+          "envelope": {
+            "type": "adsr",
+            "sustain": 1.0,
+            "release": 0.5,
+            "attack": 0.0,
+            "decay": 0.0
           }
           },
           "volume": 0.5,
@@ -114,6 +128,7 @@ object VoiceTest {
     @Test
     fun main() {
         val drone = VoiceTest.testParse()
+        println(drone.instrument.envelope::class)
         val tink = VoiceTest.testKs()
         val duration = 4.0
         val length = (44100.0 * duration).toInt()
@@ -128,8 +143,11 @@ object VoiceTest {
         val line = AudioSystem.getLine(info) as SourceDataLine
         line.open()
         line.start()
+        val writer = WaveWriter()
+        writer.open("test.wav")
+        writer.writeHeader(format)
         try {
-            while (true) {
+            repeat (3) {
                 buffer.forEach { b -> b.fill(0.0) }
                 drone.writeMeasure(format, buffer)
                 tink.writeMeasure(format, buffer)
@@ -139,11 +157,13 @@ object VoiceTest {
                         intBuffer.put((b[a] * 32767).toInt().toShort())
                     }
                 }
+                writer.writeData(byteArray, length.toInt() * 2 * channels, 0)
                 line.write(byteArray, 0, length.toInt() * 2 * channels)
             }
         } finally {
             line.drain()
             line.close()
+            writer.close()
         }
     }
 }

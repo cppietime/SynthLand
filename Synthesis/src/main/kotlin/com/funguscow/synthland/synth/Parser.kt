@@ -76,7 +76,7 @@ object Parser {
                     "vii" to 10.0,
                     "VII" to 11.0,
                 )
-                val (baseNote, _) = parseNote(json["base"]!!.jsonPrimitive.content)
+                val (baseNote, _) = parseNote(json["base"]!!.jsonPrimitive)
                 val intervals = json["intervals"]!!.jsonArray.map {
                     keys[it.jsonPrimitive.content] ?: it.jsonPrimitive.double
                 }
@@ -84,8 +84,8 @@ object Parser {
             }
             is JsonPrimitive -> {
                 val str = json.content
-                val (baseNote, idx) = parseNote(str)
-                val interval = when(str[idx]) {
+                val (baseNote, idx) = parseNote(json)
+                val interval = if (idx >= str.length) listOf(0, 2, 4, 5, 7, 9, 11) else when(str[idx]) {
                     'm' -> listOf(0, 2, 3, 5, 7, 8, 10)
                     'P' -> listOf(0, 2, 4, 7, 9)
                     'p' -> listOf(0, 3, 5, 7, 10)
@@ -96,35 +96,35 @@ object Parser {
                 }
                 interval.map{it + baseNote}
             }
-            is JsonArray -> {json.map {parseNote(it.jsonPrimitive.content).first}}
+            is JsonArray -> {json.map {parseNote(it.jsonPrimitive).first}}
         })
 
-    fun parseNote(id: String) : Pair<Double, Int> {
-        if (id.first().isDigit() || id.first() == '-') {
+    fun parseNote(id: JsonPrimitive) : Pair<Double, Int> {
+        id.doubleOrNull?.also {
             // Literal MIDI note
-            return Pair(id.toDouble(), id.length)
+            return Pair(it.toDouble(), id.content.length)
         }
-        val a0 = 69 - 48
+        val c0 = 60 - 48
         val notes = mapOf(
-            'A' to 0.0,
-            'B' to 2.0,
-            'C' to 3.0,
-            'D' to 5.0,
-            'E' to 7.0,
-            'F' to 8.0,
-            'G' to 10.0,
+            'A' to 9.0,
+            'B' to 11.0,
+            'C' to 0.0,
+            'D' to 2.0,
+            'E' to 4.0,
+            'F' to 5.0,
+            'G' to 7.0,
         )
         var idx = 0
-        var note = a0 + notes[id[idx++]]!!
-        if (id[idx] == '#') {
+        var note = c0 + notes[id.content[idx++]]!!
+        if (id.content[idx] == '#') {
             note += 1.0
             idx++
         }
-        else if (id[idx] == 'b') {
+        else if (id.content[idx] == 'b') {
             note -= 1.0
             idx++
         }
-        note += 12 * id[idx++].digitToInt()
+        note += 12 * id.content[idx++].digitToInt()
         return Pair(note, idx)
     }
 

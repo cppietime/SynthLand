@@ -17,3 +17,9 @@
   - Instrument
   - Volume
   - Speed
+
+## Wave file output:
+
+- Write header, save bookmarks for placeholders
+- Write PCM data
+- Rewind and fill in placeholders
