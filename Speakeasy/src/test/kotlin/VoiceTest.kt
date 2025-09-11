@@ -3,6 +3,7 @@ package com.funguscow.synthland.speaker
 import com.funguscow.synthland.synth.*
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
+import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import javax.sound.sampled.AudioFormat
@@ -158,12 +159,20 @@ object VoiceTest {
                     }
                 }
                 writer.writeData(byteArray, length.toInt() * 2 * channels, 0)
-                line.write(byteArray, 0, length.toInt() * 2 * channels)
+                //line.write(byteArray, 0, length.toInt() * 2 * channels)
             }
         } finally {
             line.drain()
             line.close()
             writer.close()
         }
+    }
+
+    @Test
+    fun testV2W() {
+        val infile = File("voice_test.json")
+        val outfile = File("voice_test.wav")
+        val format = AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 44100f, 16, 2, 4, 44100f * 4, false)
+        VoicesToWav.voicesToWav(format, infile, outfile)
     }
 }

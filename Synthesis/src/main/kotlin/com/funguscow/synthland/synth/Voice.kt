@@ -9,13 +9,13 @@ interface NoteScale {
 
 class UniformSampleScale(private val notes: List<Double>) : NoteScale {
     override fun sampleNotes(numNotes: Int): List<Double> {
+        val choices = notes.indices.toMutableList()
         val selection = mutableListOf<Double>()
-        (0 until numNotes).forEach { _ ->
-            val idx = Random.nextInt(notes.size)
+        repeat(numNotes) { _ ->
+            val i = Random.nextInt(choices.size)
+            val idx = choices.removeAt(i)
             val note = notes[idx]
-            if (!selection.contains(note)) {
-                selection.add(note)
-            }
+            selection.add(note)
         }
         return selection
     }
@@ -40,7 +40,8 @@ class UniformSampleScale(private val notes: List<Double>) : NoteScale {
 enum class NoteType {
     CONSTANT,
     DRONE,
-    PLUCK;
+    PLUCK,
+    ARPEGGIO;
 }
 
 class Voice(val instrument: Instrument, val volume: Double, val speed: Double, val scale: NoteScale, val type: NoteType, val noteProb: Double = 1.0) {
@@ -69,6 +70,24 @@ class Voice(val instrument: Instrument, val volume: Double, val speed: Double, v
                 notes.add(note)
             }
             notes
+        }
+        NoteType.ARPEGGIO -> {
+            if (Random.nextDouble() > noteProb) {
+                listOf()
+            } else {
+                val choices = scale.sampleNotes(3)
+                val notes = mutableListOf<Note>()
+                for (idx in 0 until speed.toInt()) {
+                    val note = Note(
+                        choices[idx % choices.size],
+                        volume / speed,
+                        idx / speed * numFrames,
+                        numFrames / speed - instrument.envelope.numExtraSamples(null, format)
+                    )
+                    notes.add(note)
+                }
+                notes
+            }
         }
     }
 

@@ -1,0 +1,97 @@
+{
+  "voices": [
+    {
+      "instrument": {
+        "envelope": {
+          "type": "adsr",
+          "attack": 1.0,
+          "sustain": 1.0,
+          "decay": 0.0,
+          "release": 1.0
+        },
+        "instrument": {
+          "type": "apply",
+          "filter": {
+            "type": "chain",
+            "filters": [
+              {
+                "type": "chorus",
+                "frequency": 0.1,
+                "depth": 300,
+                "size": 10
+              },
+              {
+                "type": "design_iir",
+                "prototype": "BUTTERWORTH",
+                "degree": 4,
+                "cutoff": {
+                  "hz": 4000,
+                  "sampling": 44100
+                }
+              }
+            ]
+          },
+          "generator": {
+            "type": "binbeat",
+            "generator": {
+              "type": "sin",
+              "generator": {
+                "type": "add",
+                "left": {
+                  "type": "linear"
+                },
+                "right": {
+                  "type": "modifier",
+                  "frequency_multiplier": 12.0,
+                  "volume": 1.0,
+                  "generator": {
+                    "type": "sin"
+                  }
+                }
+              }
+            },
+            "frequency": 3.6
+          }
+        }
+      },
+      "scale": "C2",
+      "type": "DRONE",
+      "volume": 0.125
+    },
+    {
+      "instrument": {
+        "instrument": {
+          "type": "apply",
+          "filter": {
+            "type": "chorus",
+            "frequency": 0.2,
+            "depth": 150.0,
+            "size": 10
+          },
+          "generator": {
+            "type": "pluck",
+            "generator": {
+              "type": "noise"
+            },
+            "stretch": [24.0],
+            "drum": 0.0
+          }
+        },
+        "envelope": {
+          "type": "adsr",
+          "sustain": 1.0,
+          "release": 0.5,
+          "attack": 0.0,
+          "decay": 0.0
+        }
+      },
+      "volume": 0.5,
+      "speed": 24.0,
+      "type": "ARPEGGIO",
+      "scale": "C4",
+      "probability": 0.667
+    }
+  ],
+  "measureLength": 4.0,
+  "measures": 4
+}
