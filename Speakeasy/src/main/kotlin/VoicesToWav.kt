@@ -56,3 +56,14 @@ object VoicesToWav {
         }
     }
 }
+
+fun main(args: Array<String>) {
+    if (args.size < 2) {
+        println("Specify in and out file paths");
+        return
+    }
+    val infile = File(args[0])
+    val outfile = File(args[1])
+    val format = AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 44100f, 16, 2, 4, 44100f * 4, false)
+    VoicesToWav.voicesToWav(format, infile, outfile)
+}
