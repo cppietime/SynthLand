@@ -44,7 +44,7 @@ class WaveWriter : Closeable {
     private var dataSize = 0
 
     fun open(file: File) {
-        this.file = RandomAccessFile(file, "rw")
+        this.file = RandomAccessFile(file, "rw").also{it.setLength(0)}
         dataSize = 0
     }
 
